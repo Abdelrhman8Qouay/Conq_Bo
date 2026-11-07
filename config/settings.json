@@ -1,4 +1,27 @@
 {
-  "window_title": "MaionerEra",
-  "pickup_key": "`"
+  "windows": [
+    "MaionerEra",
+    "MaionerEra - Character2",
+    "MaionerEra - Character3"
+  ],
+  "items": [
+    {
+      "name": "فضة",
+      "image": "silver.png",
+      "priority": 10,
+      "threshold": 0.65
+    },
+    {
+      "name": "Meteor",
+      "image": "meteor.png",
+      "priority": 5,
+      "threshold": 0.7
+    },
+    {
+      "name": "DragonBall",
+      "image": "db.png",
+      "priority": 20,
+      "threshold": 0.75
+    }
+  ]
 }

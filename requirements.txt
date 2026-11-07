@@ -4,3 +4,5 @@ mss
 pydirectinput
 keyboard
 pygetwindow
+pywin32
+rapidocr_onnxruntime

@@ -2,53 +2,109 @@
 import cv2
 import numpy as np
 import mss
+import win32gui
+import os
+import json
 
 
 class Vision:
-    def __init__(self):
+    def __init__(self, config_path):
         self.sct = mss.mss()
-        # Keep the region you have been using
-        self.monitor = {"top": 240, "left": 460, "width": 1000, "height": 600}
-        self.template = None
+        self.loaded_templates = []
 
-    def load_template(self, path):
-        # Load as grayscale (0) to ignore color variations
-        self.template = cv2.imread(path, 0)
-        if self.template is None:
-            raise Exception(f"Could not load template at {path}")
+        # CPU OPTIMIZATION 1: Downscale Factor
+        # 0.5 means we process the image at 50% size. 4x faster CPU.
+        self.scale = 0.5
 
-    def find_template(self, threshold=0.65):
-        # Capture screen
-        img = np.array(self.sct.grab(self.monitor))
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(config_path, "r", encoding="utf-8") as f:
+            settings = json.load(f)
 
-        # Convert screen to grayscale
-        screen_gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
+        templates_dir = os.path.join(BASE_DIR, "config", "templates")
 
-        # Match template
-        result = cv2.matchTemplate(screen_gray, self.template, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        for item in settings.get("items", []):
+            path = os.path.join(templates_dir, item["image"])
+            template = cv2.imread(path, 0)  # Load grayscale
+            if template is not None:
+                # Resize the template to match the downscaled screen
+                h, w = template.shape[:2]
+                resized_template = cv2.resize(
+                    template, (int(w * self.scale), int(h * self.scale))
+                )
 
-        # Convert BGRA to BGR for debug display
-        debug_img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+                self.loaded_templates.append(
+                    {
+                        "name": item["name"],
+                        "priority": item.get("priority", 1),
+                        "threshold": item.get("threshold", 0.65),
+                        "image": resized_template,
+                    }
+                )
 
-        if max_val >= threshold:
-            h, w = self.template.shape[:2]
-            center_x = max_loc[0] + (w // 2)
-            center_y = max_loc[1] + (h // 2)
+    def get_game_rect(self, window_title):
+        hwnd = None
 
-            abs_x = self.monitor["left"] + center_x
-            abs_y = self.monitor["top"] + center_y
+        def enum_cb(h, results):
+            if (
+                win32gui.IsWindowVisible(h)
+                and win32gui.GetWindowText(h) == window_title
+            ):
+                results.append(h)
+            return True
 
-            # Draw a green box around what it found
-            cv2.rectangle(
-                debug_img, max_loc, (max_loc[0] + w, max_loc[1] + h), (0, 255, 0), 2
-            )
-            cv2.imshow("Bot Vision", debug_img)
-            cv2.waitKey(1)
-
-            return (abs_x, abs_y)
-
-        # Show empty vision box if nothing found
-        cv2.imshow("Bot Vision", debug_img)
-        cv2.waitKey(1)
+        results = []
+        win32gui.EnumWindows(enum_cb, results)
+        if results:
+            hwnd = results[0]
+            rect = win32gui.GetClientRect(hwnd)
+            pt = win32gui.ClientToScreen(hwnd, (0, 0))
+            return (pt[0], pt[1], pt[0] + rect[2], pt[1] + rect[3])
         return None
+
+    def scan_window(self, window_title):
+        rect = self.get_game_rect(window_title)
+        if not rect:
+            return None
+
+        # CPU OPTIMIZATION 2: Region of Interest (ROI)
+        # We only scan the center 60% of the screen. This ignores UI, Sky, and Chat.
+        width = rect[2] - rect[0]
+        height = rect[3] - rect[1]
+
+        roi_x = rect[0] + int(width * 0.2)
+        roi_y = rect[1] + int(height * 0.3)
+        roi_w = int(width * 0.6)
+        roi_h = int(height * 0.5)
+
+        monitor = {"top": roi_y, "left": roi_x, "width": roi_w, "height": roi_h}
+        img = np.array(self.sct.grab(monitor))
+
+        # Convert to grayscale
+        img_gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
+
+        # Downscale for CPU
+        img_small = cv2.resize(img_gray, (0, 0), fx=self.scale, fy=self.scale)
+
+        found_items = []
+
+        for item in self.loaded_templates:
+            template = item["image"]
+            result = cv2.matchTemplate(img_small, template, cv2.TM_CCOEFF_NORMED)
+            locations = np.where(result >= item["threshold"])
+
+            for pt in zip(*locations[::-1]):
+                # Convert coordinates back to real screen pixels
+                real_x = int(pt[0] / self.scale) + roi_x
+                real_y = int(pt[1] / self.scale) + roi_y
+
+                found_items.append(
+                    {
+                        "name": item["name"],
+                        "priority": item["priority"],
+                        "x": real_x,
+                        "y": real_y,
+                        "window": window_title,
+                    }
+                )
+
+        return found_items if found_items else None
