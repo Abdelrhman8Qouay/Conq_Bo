@@ -31,7 +31,7 @@ we need to make the bot act like a real player:
 - Click on your Conquer Online game window to make it the active window.
 - Wait for the item to drop. Because the script is now running with Administrator privileges, pydirectinput will be able to send the click and the ~ key directly to the game, bypassing any focus issues!
 
-# Version 1.3.1
+# Version 1.3.0
 
 ## To address your weak CPU, we are abandoning "brute force" screen scanning. Instead of checking every pixel of the screen 10 times a second, we are implementing Three Major Optimizations:
 
@@ -66,3 +66,7 @@ You look at your 2nd monitor, see the red flash.
 You click the red panel with your mouse. Python instantly brings Account 2 to the front of your screen.
 You press F9. The bot automatically moves your mouse to the exact coordinates of the DB, holds Ctrl, and clicks it.
 You Alt-Tab back to what you were doing.
+
+# Version 1.3.1
+
+- Improved the Monitor Radar.

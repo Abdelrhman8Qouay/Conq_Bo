@@ -1,27 +1,29 @@
 {
-  "windows": [
-    "MaionerEra",
-    "MaionerEra - Character2",
-    "MaionerEra - Character3"
-  ],
+  "windows": ["MaionerEra", "!|Tha|ABO|!", "MaionerEra - Character3"],
   "items": [
     {
-      "name": "فضة",
-      "image": "silver.png",
+      "name": "ذهب",
+      "image": "gold.png",
       "priority": 10,
-      "threshold": 0.65
+      "threshold": 0.85
     },
     {
-      "name": "Meteor",
+      "name": "كره خبره(م)",
+      "image": "ExpBall.png",
+      "priority": 10,
+      "threshold": 0.85
+    },
+    {
+      "name": "نيزك",
       "image": "meteor.png",
       "priority": 5,
-      "threshold": 0.7
+      "threshold": 0.85
     },
     {
-      "name": "DragonBall",
+      "name": "كرة التنين",
       "image": "db.png",
       "priority": 20,
-      "threshold": 0.75
+      "threshold": 0.87
     }
   ]
 }
